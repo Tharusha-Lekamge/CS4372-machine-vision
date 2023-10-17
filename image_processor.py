@@ -456,6 +456,119 @@ class ImageProcessor:
 
         return edge_image
 
+    def get_mean(self, input_img_array, indices=None):
+        """
+        Input:
+            input_img_array: Image array - accepts a numpy array
+            indices: Indices of the pixels to be averaged
+        Output:
+            mean: Mean of the pixels
+        """
+
+        if indices is None:
+            # get the average of whole image
+            return np.mean(input_img_array)
+
+        mean = 0
+        for index in indices:
+            mean += input_img_array[index[0], index[1]]
+        return mean / len(indices)
+
+    def get_partitions(self, input_img_array, threshold: float):
+        """
+        Input:
+            input_img_array: Image array - accepts a numpy array
+            threshold: Threshold value for segmentation
+        Output:
+            high_intensity: Indices of the pixels with intensity above threshold
+            low_intensity: Indices of the pixels with intensity below threshold
+        """
+        high_intensity = []
+        low_intensity = []
+
+        for i in range(input_img_array.shape[0]):
+            for j in range(input_img_array.shape[1]):
+                if input_img_array[i, j] >= threshold:
+                    high_intensity.append((i, j))
+                else:
+                    low_intensity.append((i, j))
+
+        return high_intensity, low_intensity
+
+    def inter_means_segmentation(
+        self, input_img_array, threshold: float = None, output_name: str = None
+    ):
+        """
+        Input:
+            input_img_array: Image array - accepts a numpy array
+            threshold: Threshold value for segmentation
+            output_name: Name of the output image if you want to save it
+        Output:
+            img_array: Image array - returns a grey-scaled image as a numpy array
+            if output_name is provided, saves the image in jpg format
+        """
+        if not isinstance(input_img_array, np.ndarray):
+            raise ValueError("Input image must be a NumPy array")
+
+        # Check if the input image has 1 channel (greyscale)
+        if len(input_img_array.shape) == 3:
+            # convert to grey
+            print("not in grey scale. Converting...")
+            input_img_array = self.rgb_to_grey(input_img_array, "average")
+            print("Converted to grey scale")
+
+        if threshold is None:
+            threshold = self.get_mean(input_img_array)
+
+        print("initial threshold: ", threshold)
+
+        # Create an empty image
+        img_array = np.zeros(input_img_array.shape)
+
+        high_intensity, low_intensity = self.get_partitions(input_img_array, threshold)
+
+        print("High intensity: ", len(high_intensity))
+        print("Low intensity: ", len(low_intensity))
+
+        mu_1 = self.get_mean(input_img_array, high_intensity)
+        mu_2 = self.get_mean(input_img_array, low_intensity)
+
+        print("initial mu_1: ", mu_1)
+        print("initial mu_2: ", mu_2)
+
+        old_mu_1 = old_mu_2 = threshold
+
+        while abs(mu_1 - old_mu_1) > 0.01 and abs(mu_2 - old_mu_2) > 0.01:
+            new_threshold = (mu_1 + mu_2) / 2
+            old_mu_1 = mu_1
+            old_mu_2 = mu_2
+
+            high_intensity, low_intensity = self.get_partitions(
+                input_img_array, new_threshold
+            )
+
+            mu_1 = self.get_mean(input_img_array, high_intensity)
+            mu_2 = self.get_mean(input_img_array, low_intensity)
+
+        final_threshold = (mu_1 + mu_2) / 2
+        print("final threshold: ", final_threshold)
+
+        high_intensity, low_intensity = self.get_partitions(
+            input_img_array, final_threshold
+        )
+
+        for index in high_intensity:
+            img_array[index[0], index[1]] = 255
+
+        # display image
+        self.display(img_array)
+
+        if output_name:
+            new_p = Image.fromarray(img_array)
+            new_p = new_p.convert("L")
+            self.save_img(new_p, output_name)
+        return img_array
+
     def save_img(self, img_array, output_name: str):
         if not output_name.endswith(".jpg"):
             output_name = output_name + ".jpg"

@@ -12,3 +12,10 @@ Write a program to do the following
 6. Submit your program and all sample images, and, outputs as a single ZIP file
 
 Please note that except for image loading and saving, you are not allowed to use any image processing libraries (such as OpenCV).  All code must be your native coding.  You may use any popular programming language for coding.
+
+## Lab 02
+Write a python script to implement the Canny edge detection algorithm.  You may use OpenCV or similar library only for loading and saving an image.  All other functions should be in your native code.
+
+## Lab 03
+
+Write a Python (or any other programming langauge) program to find an image threshold based on the inter-means algorithm.  Then apply your algorithm to two images and upload your script with the original and segmented images.
